@@ -1,5 +1,8 @@
 package org.sid.axonframework.commonApi.commands;
 
+import lombok.Getter;
+
+@Getter
 public class DebitAccountCommand extends BaseCommand<String>{
     private double amount;
     private String currency;

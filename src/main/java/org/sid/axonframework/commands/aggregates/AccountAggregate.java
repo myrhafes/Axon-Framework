@@ -6,9 +6,13 @@ import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
 import org.sid.axonframework.commonApi.commands.CreateAccountCommand;
+import org.sid.axonframework.commonApi.commands.CreditAccountCommand;
+import org.sid.axonframework.commonApi.commands.DebitAccountCommand;
 import org.sid.axonframework.commonApi.enums.AccountStatus;
 import org.sid.axonframework.commonApi.events.AccountActivatedEvent;
 import org.sid.axonframework.commonApi.events.AccountCreatedEvent;
+import org.sid.axonframework.commonApi.events.AccountCreditedEvent;
+import org.sid.axonframework.commonApi.events.AccountDebitedEvent;
 
 @Aggregate
 public class AccountAggregate {
@@ -28,7 +32,8 @@ public class AccountAggregate {
         AggregateLifecycle.apply(new AccountCreatedEvent(
                 command.getId(),
                 command.getInitialBalance(),
-                command.getCurrency()
+                command.getCurrency(),
+                AccountStatus.CREATED
         ));
     }
 
@@ -47,5 +52,36 @@ public class AccountAggregate {
     @EventSourcingHandler
     public void on(AccountActivatedEvent event) {
         this.status = event.getStatus();
+    }
+
+    @CommandHandler
+    public void handle(CreditAccountCommand command) {
+        if(command.getAmount() <= 0) throw new RuntimeException("Amount is < 0 !");
+        AggregateLifecycle.apply(new AccountCreditedEvent(
+                command.getId(),
+                command.getAmount(),
+                command.getCurrency()
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(AccountCreditedEvent event) {
+        this.balance += event.getAmount();
+    }
+
+    @CommandHandler
+    public void handle(DebitAccountCommand command) {
+        if(command.getAmount() <= 0) throw new RuntimeException("Amount is < 0 !");
+        if(this.balance < command.getAmount()) throw new RuntimeException("Balance ...");
+        AggregateLifecycle.apply(new AccountCreditedEvent(
+                command.getId(),
+                command.getAmount(),
+                command.getCurrency()
+        ));
+    }
+
+    @EventSourcingHandler
+    public void on(AccountDebitedEvent event) {
+        this.balance -= event.getAmount();
     }
 }
